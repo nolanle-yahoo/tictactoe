@@ -175,6 +175,22 @@
     .cell.win {
       background: var(--hover);
       box-shadow: 0 0 16px 4px rgba(168, 218, 220, 0.35);
+      animation: winPop 0.5s ease forwards;
+    }
+
+    @keyframes winPop {
+      0%   { transform: scale(1); }
+      40%  { transform: scale(1.18); }
+      70%  { transform: scale(0.94); }
+      100% { transform: scale(1.08); }
+    }
+
+    /* ---- confetti canvas ---- */
+    #confetti {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 999;
     }
 
     /* ---- restart ---- */
@@ -197,6 +213,7 @@
 </head>
 <body>
 
+  <canvas id="confetti"></canvas>
   <button id="theme-btn" title="Toggle light/dark mode">🌙</button>
 
   <h1>Tic Tac Toe</h1>
@@ -372,6 +389,7 @@
         }
         scores[result.winner]++;
       playWin();
+      launchConfetti();
       } else {
         setStatus("It's a draw!");
         scores.D++;
@@ -507,6 +525,56 @@
         osc.start(t);
         osc.stop(t + 0.4);
       });
+    }
+
+    // ---- confetti ----
+    const canvas = document.getElementById('confetti');
+    const ctx2d  = canvas.getContext('2d');
+    let confettiPieces = [];
+    let confettiRaf = null;
+    const COLORS = ['#e94560','#a8dadc','#f4d35e','#ee964b','#8ecae6','#b5ead7','#ff9f1c'];
+
+    function launchConfetti() {
+      canvas.width  = window.innerWidth;
+      canvas.height = window.innerHeight;
+      confettiPieces = Array.from({ length: 120 }, () => ({
+        x: Math.random() * canvas.width,
+        y: Math.random() * -canvas.height * 0.5,
+        w: 8 + Math.random() * 8,
+        h: 4 + Math.random() * 5,
+        color: COLORS[Math.floor(Math.random() * COLORS.length)],
+        rot: Math.random() * Math.PI * 2,
+        vx: (Math.random() - 0.5) * 3,
+        vy: 2 + Math.random() * 4,
+        vrot: (Math.random() - 0.5) * 0.2,
+        alpha: 1,
+      }));
+      if (confettiRaf) cancelAnimationFrame(confettiRaf);
+      animateConfetti();
+    }
+
+    function animateConfetti() {
+      ctx2d.clearRect(0, 0, canvas.width, canvas.height);
+      confettiPieces.forEach(p => {
+        p.x   += p.vx;
+        p.y   += p.vy;
+        p.rot += p.vrot;
+        p.vy  += 0.08;
+        if (p.y > canvas.height * 0.75) p.alpha -= 0.02;
+        ctx2d.save();
+        ctx2d.globalAlpha = Math.max(0, p.alpha);
+        ctx2d.translate(p.x, p.y);
+        ctx2d.rotate(p.rot);
+        ctx2d.fillStyle = p.color;
+        ctx2d.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+        ctx2d.restore();
+      });
+      confettiPieces = confettiPieces.filter(p => p.alpha > 0);
+      if (confettiPieces.length) {
+        confettiRaf = requestAnimationFrame(animateConfetti);
+      } else {
+        ctx2d.clearRect(0, 0, canvas.width, canvas.height);
+      }
     }
 
     // ---- dark / light mode ----
