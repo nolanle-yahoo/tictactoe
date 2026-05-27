@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tic Tac Toe</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ---- theme variables ---- */
+    :root {
+      --bg:        #1a1a2e;
+      --surface:   #16213e;
+      --hover:     #0f3460;
+      --text:      #eee;
+      --muted:     #aaa;
+      --accent1:   #e94560;
+      --accent2:   #a8dadc;
+    }
+
+    body.light {
+      --bg:       #f0f4f8;
+      --surface:  #dce6f0;
+      --hover:    #b8cfe0;
+      --text:     #1a1a2e;
+      --muted:    #555;
+      --accent1:  #c0334e;
+      --accent2:  #2a7fa8;
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg);
+      font-family: 'Segoe UI', sans-serif;
+      color: var(--text);
+      transition: background 0.25s, color 0.25s;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      color: var(--accent1);
+    }
+
+    /* ---- theme toggle button ---- */
+    #theme-btn {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      font-size: 1.4rem;
+      background: var(--surface);
+      border: 2px solid var(--muted);
+      border-radius: 50%;
+      width: 2.6rem;
+      height: 2.6rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s, border-color 0.2s, transform 0.15s;
+    }
+
+    #theme-btn:hover { transform: scale(1.12); }
+
+    /* ---- toggle buttons shared style ---- */
+    .toggle-group {
+      display: flex;
+      gap: 0;
+      margin-bottom: 1.2rem;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .toggle-group.red   { border: 2px solid var(--accent1); }
+    .toggle-group.teal  { border: 2px solid var(--accent2); }
+
+    .toggle-group button {
+      padding: 0.5rem 1.2rem;
+      font-size: 0.88rem;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      background: transparent;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .toggle-group.red  button        { color: var(--accent1); }
+    .toggle-group.red  button.active { background: var(--accent1); color: #fff; }
+    .toggle-group.teal button        { color: var(--accent2); }
+    .toggle-group.teal button.active { background: var(--accent2); color: var(--bg); }
+
+    /* ---- emoji picker ---- */
+    #emoji-picker {
+      display: flex;
+      align-items: center;
+      gap: 1.2rem;
+      margin-bottom: 1.2rem;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    #emoji-picker label { font-weight: 600; }
+
+    .emoji-select {
+      display: flex;
+      gap: 6px;
+    }
+
+    .emoji-btn {
+      font-size: 1.5rem;
+      background: var(--surface);
+      border: 2px solid transparent;
+      border-radius: 8px;
+      padding: 4px 7px;
+      cursor: pointer;
+      transition: border-color 0.15s, transform 0.1s, background 0.25s;
+      line-height: 1;
+    }
+
+    .emoji-btn:hover { transform: scale(1.15); }
+    .emoji-btn.active-p1 { border-color: var(--accent1); }
+    .emoji-btn.active-p2 { border-color: var(--accent2); }
+
+    /* ---- score ---- */
+    #score {
+      display: flex;
+      gap: 2rem;
+      margin-bottom: 1.2rem;
+      font-size: 0.95rem;
+      color: var(--muted);
+    }
+
+    #score b { font-size: 1.1rem; }
+    .score-p1 { color: var(--accent1); }
+    .score-p2 { color: var(--accent2); }
+
+    #status {
+      font-size: 1.2rem;
+      margin-bottom: 1.5rem;
+      height: 1.5rem;
+      color: var(--accent2);
+    }
+
+    /* ---- board ---- */
+    #board {
+      display: grid;
+      grid-template-columns: repeat(3, 120px);
+      grid-template-rows: repeat(3, 120px);
+      gap: 8px;
+    }
+
+    .cell {
+      background: var(--surface);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3.2rem;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      user-select: none;
+    }
+
+    .cell:hover:not(.taken) {
+      background: var(--hover);
+      transform: scale(1.04);
+    }
+
+    .cell.win {
+      background: var(--hover);
+      box-shadow: 0 0 16px 4px rgba(168, 218, 220, 0.35);
+    }
+
+    /* ---- restart ---- */
+    #restart {
+      margin-top: 2rem;
+      padding: 0.7rem 2.2rem;
+      font-size: 1rem;
+      font-weight: 600;
+      letter-spacing: 1px;
+      background: var(--accent1);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+    }
+
+    #restart:hover { filter: brightness(0.88); transform: scale(1.04); }
+  </style>
+</head>
+<body>
+
+  <button id="theme-btn" title="Toggle light/dark mode">🌙</button>
+
+  <h1>Tic Tac Toe</h1>
+
+  <!-- Mode -->
+  <div class="toggle-group red">
+    <button id="btn-2p" class="active" onclick="setMode('2p')">2 Players</button>
+    <button id="btn-cpu" onclick="setMode('cpu')">vs Computer</button>
+  </div>
+
+  <!-- Difficulty (cpu only) -->
+  <div id="difficulty" class="toggle-group teal" style="display:none">
+    <button id="btn-easy"   onclick="setDifficulty('easy')">Easy</button>
+    <button id="btn-medium" class="active" onclick="setDifficulty('medium')">Medium</button>
+    <button id="btn-hard"   onclick="setDifficulty('hard')">Hard</button>
+  </div>
+
+  <!-- Emoji picker -->
+  <div id="emoji-picker">
+    <div>
+      <label class="score-p1">P1 </label>
+      <div class="emoji-select" id="p1-emojis"></div>
+    </div>
+    <div>
+      <label class="score-p2">P2 </label>
+      <div class="emoji-select" id="p2-emojis"></div>
+    </div>
+  </div>
+
+  <!-- Score -->
+  <div id="score">
+    <div><span id="lbl-p1" class="score-p1"></span> <b class="score-p1" id="score-p1">0</b></div>
+    <div>Draws <b id="score-d">0</b></div>
+    <div><span id="lbl-p2" class="score-p2"></span> <b class="score-p2" id="score-p2">0</b></div>
+  </div>
+
+  <div id="status"></div>
+
+  <div id="board">
+    <div class="cell" data-i="0"></div>
+    <div class="cell" data-i="1"></div>
+    <div class="cell" data-i="2"></div>
+    <div class="cell" data-i="3"></div>
+    <div class="cell" data-i="4"></div>
+    <div class="cell" data-i="5"></div>
+    <div class="cell" data-i="6"></div>
+    <div class="cell" data-i="7"></div>
+    <div class="cell" data-i="8"></div>
+  </div>
+
+  <button id="restart">New Game</button>
+
+  <script>
+    const WINS = [
+      [0,1,2],[3,4,5],[6,7,8],
+      [0,3,6],[1,4,7],[2,5,8],
+      [0,4,8],[2,4,6]
+    ];
+
+    const EMOJIS = ['🔥','💧','⚡','🌀','💀','👾','🍕','🐉','🌈','🎯','💎','🚀'];
+
+    let sym = { P1: '🔥', P2: '💧' };
+    let board, current, over;
+    let mode = '2p';
+    let difficulty = 'medium';
+    let scores = { P1: 0, P2: 0, D: 0 };
+
+    const cells = document.querySelectorAll('.cell');
+    const status = document.getElementById('status');
+
+    // ---- build emoji picker ----
+    function buildPicker() {
+      ['p1','p2'].forEach((p, pi) => {
+        const key = pi === 0 ? 'P1' : 'P2';
+        const container = document.getElementById(p + '-emojis');
+        container.innerHTML = '';
+        EMOJIS.forEach(e => {
+          const btn = document.createElement('button');
+          btn.className = 'emoji-btn';
+          btn.textContent = e;
+          if (sym[key] === e) btn.classList.add('active-' + p);
+          btn.onclick = () => pickEmoji(key, e);
+          container.appendChild(btn);
+        });
+      });
+      updateLabels();
+    }
+
+    function pickEmoji(player, e) {
+      const other = player === 'P1' ? 'P2' : 'P1';
+      if (sym[other] === e) return; // can't pick same as opponent
+      sym[player] = e;
+      scores = { P1: 0, P2: 0, D: 0 };
+      updateScoreDisplay();
+      buildPicker();
+      init();
+    }
+
+    function updateLabels() {
+      document.getElementById('lbl-p1').textContent = mode === 'cpu' ? 'You ' + sym.P1 : 'P1 ' + sym.P1;
+      document.getElementById('lbl-p2').textContent = mode === 'cpu' ? 'CPU ' + sym.P2 : 'P2 ' + sym.P2;
+    }
+
+    // ---- mode / difficulty ----
+    function setMode(m) {
+      mode = m;
+      document.getElementById('btn-2p').classList.toggle('active', m === '2p');
+      document.getElementById('btn-cpu').classList.toggle('active', m === 'cpu');
+      document.getElementById('difficulty').style.display = m === 'cpu' ? 'flex' : 'none';
+      scores = { P1: 0, P2: 0, D: 0 };
+      updateScoreDisplay();
+      updateLabels();
+      init();
+    }
+
+    function setDifficulty(d) {
+      difficulty = d;
+      ['easy','medium','hard'].forEach(x =>
+        document.getElementById('btn-' + x).classList.toggle('active', x === d)
+      );
+      scores = { P1: 0, P2: 0, D: 0 };
+      updateScoreDisplay();
+      init();
+    }
+
+    function updateScoreDisplay() {
+      document.getElementById('score-p1').textContent = scores.P1;
+      document.getElementById('score-p2').textContent = scores.P2;
+      document.getElementById('score-d').textContent  = scores.D;
+    }
+
+    // ---- game ----
+    function init() {
+      board = Array(9).fill('');
+      current = 'P1';
+      over = false;
+      cells.forEach(c => { c.textContent = ''; c.className = 'cell'; });
+      setStatus();
+    }
+
+    function setStatus(msg) {
+      if (msg) { status.textContent = msg; return; }
+      if (mode === 'cpu') {
+        status.textContent = current === 'P1' ? `Your turn ${sym.P1}` : `Computer thinking...`;
+      } else {
+        status.textContent = `${current === 'P1' ? 'P1' : 'P2'} ${sym[current]}'s turn`;
+      }
+    }
+
+    function checkWinner(b) {
+      for (const [a, x, c] of WINS) {
+        if (b[a] && b[a] === b[x] && b[a] === b[c])
+          return { winner: b[a], line: [a, x, c] };
+      }
+      if (b.every(v => v)) return { winner: null, line: [] };
+      return null;
+    }
+
+    function placeMove(i, player) {
+      board[i] = player;
+      cells[i].textContent = sym[player];
+      cells[i].classList.add('taken');
+    }
+
+    function endGame(result) {
+      over = true;
+      if (result.winner) {
+        result.line.forEach(idx => cells[idx].classList.add('win'));
+        if (mode === 'cpu') {
+          setStatus(result.winner === 'P1' ? `You win! ${sym.P1}` : `Computer wins! ${sym.P2}`);
+        } else {
+          setStatus(`${result.winner === 'P1' ? 'P1' : 'P2'} ${sym[result.winner]} wins!`);
+        }
+        scores[result.winner]++;
+      } else {
+        setStatus("It's a draw!");
+        scores.D++;
+      }
+      updateScoreDisplay();
+    }
+
+    cells.forEach(cell => {
+      cell.addEventListener('click', () => {
+        const i = +cell.dataset.i;
+        if (over || board[i]) return;
+        if (mode === 'cpu' && current !== 'P1') return;
+
+        placeMove(i, current);
+        const result = checkWinner(board);
+        if (result) { endGame(result); return; }
+
+        current = current === 'P1' ? 'P2' : 'P1';
+
+        if (mode === 'cpu' && current === 'P2') {
+          setStatus();
+          setTimeout(cpuMove, 350);
+        } else {
+          setStatus();
+        }
+      });
+    });
+
+    // ---- CPU AI ----
+    function cpuMove() {
+      if (over) return;
+      const i = getBestMove();
+      placeMove(i, 'P2');
+      const result = checkWinner(board);
+      if (result) { endGame(result); return; }
+      current = 'P1';
+      setStatus();
+    }
+
+    function getBestMove() {
+      if (difficulty === 'easy')   return easyMove();
+      if (difficulty === 'medium') return mediumMove();
+      return minimaxMove();
+    }
+
+    function easyMove() {
+      const empty = board.map((v,i) => v ? null : i).filter(v => v !== null);
+      return empty[Math.floor(Math.random() * empty.length)];
+    }
+
+    function mediumMove() {
+      return Math.random() < 0.5 ? minimaxMove() : easyMove();
+    }
+
+    function minimaxMove() {
+      let best = -Infinity, bestIdx = -1;
+      for (let i = 0; i < 9; i++) {
+        if (board[i]) continue;
+        board[i] = 'P2';
+        const score = minimax(board, 0, false);
+        board[i] = '';
+        if (score > best) { best = score; bestIdx = i; }
+      }
+      return bestIdx;
+    }
+
+    function minimax(b, depth, isMax) {
+      const result = checkWinner(b);
+      if (result) {
+        if (result.winner === 'P2') return 10 - depth;
+        if (result.winner === 'P1') return depth - 10;
+        return 0;
+      }
+      if (isMax) {
+        let best = -Infinity;
+        for (let i = 0; i < 9; i++) {
+          if (b[i]) continue;
+          b[i] = 'P2';
+          best = Math.max(best, minimax(b, depth + 1, false));
+          b[i] = '';
+        }
+        return best;
+      } else {
+        let best = Infinity;
+        for (let i = 0; i < 9; i++) {
+          if (b[i]) continue;
+          b[i] = 'P1';
+          best = Math.min(best, minimax(b, depth + 1, true));
+          b[i] = '';
+        }
+        return best;
+      }
+    }
+
+    document.getElementById('restart').addEventListener('click', init);
+
+    // ---- dark / light mode ----
+    const themeBtn = document.getElementById('theme-btn');
+    let dark = true;
+
+    themeBtn.addEventListener('click', () => {
+      dark = !dark;
+      document.body.classList.toggle('light', !dark);
+      themeBtn.textContent = dark ? '🌙' : '☀️';
+    });
+
+    buildPicker();
+    init();
+  </script>
+</body>
+</html>
