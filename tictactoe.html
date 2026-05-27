@@ -376,6 +376,7 @@
       board[i] = player;
       cells[i].textContent = sym[player];
       cells[i].classList.add('taken');
+      playMove();
     }
 
     function endGame(result) {
@@ -489,6 +490,20 @@
 
     // ---- sound effects ----
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    function playMove() {
+      const osc  = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(520, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(320, audioCtx.currentTime + 0.08);
+      gain.gain.setValueAtTime(0.18, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.12);
+      osc.start(audioCtx.currentTime);
+      osc.stop(audioCtx.currentTime + 0.12);
+    }
 
     function playWin() {
       // ascending fanfare: C E G C'
